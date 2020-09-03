@@ -6,7 +6,7 @@ from gen_utils import run_bash_command,run_command
 import xml.etree.ElementTree as ET
 from  lxml import etree
 
-def create_features_file_diff(features_dir, base_index_path, new_index_path, queries_file, new_features_file, working_set_file, scripts_path):
+def create_features_file_diff(features_dir, base_index_path, new_index_path, new_features_file, working_set_file, scripts_path,java_path,swig_path,stopwords_file,queries_text_file,home_path):
     """
     Creates  a feature file via a given index and a given working set file
     """
@@ -15,7 +15,7 @@ def create_features_file_diff(features_dir, base_index_path, new_index_path, que
         os.makedirs(features_dir)
     if not os.path.exists(os.path.dirname(new_features_file)):
         os.makedirs(os.path.dirname(new_features_file))
-    command="~/jdk1.8.0_181/bin/java -Djava.library.path=/lv_local/home/sgregory/indri-5.6/swig/obj/java/ -cp seo_summarization.jar LTRFeatures "+base_index_path+" "+new_index_path+" data/stopWordsList data/working_comp_queries.txt "+working_set_file+" "+features_dir
+    command = home_path+java_path+"/bin/java -Djava.library.path="+swig_path+ " -cp seo_indri_utils.jar LTRFeatures "+base_index_path+" "+new_index_path+" "+stopwords_file+" "+queries_text_file+" "+working_set_file+" "+features_dir
     print(command)
     out = run_bash_command(command)
     print(out)

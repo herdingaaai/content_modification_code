@@ -220,24 +220,10 @@ def create_index_to_doc_name_dict(features):
             index += 1
     return doc_name_index
 
-# def create_trec_eval_file(queries, results,fname):
-#     if not os.path.exists(os.path.dirname(fname)):
-#         os.makedirs(os.path.dirname(fname))
-#     trec_file_access = open(fname, 'w')
-#     for doc in results:
-#         trec_file_access.write(queries[doc]+ " Q0 " + doc + " " + str(0) + " " + str(
-#                 results[doc]) + " sentences\n")
-#     trec_file_access.close()
 
-# def order_trec_file(trec_file):
-#     final = trec_file.replace(".txt","_sorted.txt")
-#     command = "sort -k1,1n -k5nr -k2,1 "+trec_file+" > "+final
-#     print(command)
-#     run_bash_command(command)
-#     return final
 
-def create_sentence_vector_files(output_dir, raw_ds_file, index_path):
-    command = " ~/jdk1.8.0_181/bin/java -Djava.library.path=/lv_local/home/sgregory/indri-5.6/swig/obj/java/ -cp seo_summarization.jar PrepareTFIDFVectorsSentences "+index_path+" "+raw_ds_file+" "+output_dir
+def create_sentence_vector_files(output_dir, raw_ds_file, index_path,java_path,swig_path,home_path):
+    command = home_path+java_path+"/bin/java -Djava.library.path="+swig_path+" -cp seo_indri_utils.jar PrepareTFIDFVectorsSentences "+index_path+" "+raw_ds_file+" "+output_dir
     logger.info("##Running command: "+command+"##")
     out = run_bash_command(command)
     logger.info("Command output: "+str(out))
@@ -304,8 +290,7 @@ def run_reranking(new_index,sentence_in,qid,specific_ws,ref_doc,out_index,texts,
     create_index(new_trectext_name, os.path.dirname(new_index), os.path.basename(new_index),
                  options.home_path, options.indri_path)
     features_file = create_features_file_diff(feature_dir, options.index_path, new_index,
-                                              options.queries_file,
-                                              new_feature_file, specific_ws, options.scripts_path)
+                                              new_feature_file, specific_ws, options.scripts_path,options.java_path,options.swig_path,options.stopwords_file,options.queries_text_file,options.home_path)
     logger.info("creating docname index")
     docname_index = create_index_to_doc_name_dict(features_file)
     logger.info("docname index creation is completed")
@@ -343,8 +328,11 @@ def create_qrels(raw_ds,base_trec,out_file,ref,new_indices_dir,texts,options):
             os.makedirs(scores_dir)
         for qid in raw_stats:
             epoch,q=reverese_query(qid)
+
+            """ Change FOR GENERIC porpuses if needed"""
             if epoch not in ["04","06"]:
                 continue
+
             for pair in raw_stats[qid]:
                 ref_doc = pair.split("$")[0]
                 out_index = int(pair.split("_")[1])
@@ -381,11 +369,12 @@ if __name__=="__main__":
     parser.add_option("--home_path", dest="home_path")
     parser.add_option("--jar_path", dest="jar_path")
     parser.add_option("--java_path", dest="java_path")
+    parser.add_option("--swig_path", dest="swig_path")
+    parser.add_option("--stopwords_file", dest="stopwords_file")
+    parser.add_option("--queries_text_file", dest="queries_text_file")
     parser.add_option("--scripts_path", dest="scripts_path")
     parser.add_option("--model", dest="model")
     parser.add_option("--indri_path", dest="indri_path")
-    # parser.add_option("--java_path", dest="java_path")
-
     parser.add_option("--doc_tfidf_dir", dest="doc_tfidf_dir")
     parser.add_option("--sentences_tfidf_dir", dest="sentences_tfidf_dir")
     parser.add_option("--queries_file", dest="queries_file")
@@ -396,23 +385,28 @@ if __name__=="__main__":
     parser.add_option("--output_final_feature_file_dir", dest="output_final_feature_file_dir")
     parser.add_option("--trectext_file", dest="trectext_file")
     parser.add_option("--new_trectext_file", dest="new_trectext_file")
-    parser.add_option("--model_file", dest="model_file")
+    parser.add_option("--embedding_model_file", dest="model_file")
     parser.add_option("--workingset_file", dest="workingset_file")
     parser.add_option("--svm_model_file", dest="svm_model_file")
     (options, args) = parser.parse_args()
+
     ranked_lists = read_trec_file(options.trec_file)
     doc_texts = load_file(options.trectext_file)
     mode = options.mode
 
     if mode=="qrels":
         create_raw_dataset(ranked_lists,doc_texts,options.raw_ds_out,int(options.ref_index),int(options.top_docs_index))
-        create_sentence_vector_files(options.sentences_tfidf_dir,options.raw_ds_out,options.index_path)
-        # raw_ds = read_raw_ds(options.raw_ds_out)
+        create_sentence_vector_files(options.sentences_tfidf_dir,options.raw_ds_out,options.index_path,options.java_path,options.swig_path,options.home_path)
         create_qrels(options.raw_ds_out,options.trec_file,"qrels_seo_bot"+options.ref_index+".txt",int(options.ref_index),"qrels_indices/",doc_texts,options)
     if mode=="features":
+        if not os.path.exists(options.raw_ds_out):
+            create_raw_dataset(ranked_lists, doc_texts, options.raw_ds_out, int(options.ref_index),
+                               int(options.top_docs_index))
+            create_sentence_vector_files(options.sentences_tfidf_dir, options.raw_ds_out, options.index_path,
+                                         options.java_path, options.swig_path, options.home_path)
         queries = read_queries_file(options.queries_file)
         queries = transform_query_text(queries)
-        word_embd_model = gensim.models.FastText.load_fasttext_format(options.model_file)
+        word_embd_model = gensim.models.KeyedVectors.load_word2vec_format(options.embedding_model_file,binary=True,limit=700000) #### Modify this line in case you are using other types of embeedings
         feature_creation_parallel(options.raw_ds_out,ranked_lists,doc_texts,int(options.top_docs_index),int(options.ref_index),options.doc_tfidf_dir,
                                   options.sentences_tfidf_dir,queries,options.output_feature_files_dir,options.output_final_feature_file_dir,options.workingset_file)
 
