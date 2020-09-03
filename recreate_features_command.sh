@@ -5,6 +5,6 @@ python create_bot_features.py --mode=features --index_path=<your-index-path>
 --trec_file=trecs/trec_file_original_sorted.txt --output_feature_files_dir=<path-to-feature-files-directory>
 --output_final_feature_file_dir=<final-features-for-bot-model-directory> --trectext_file=data/documents.trectext
 --new_trectext_file=<path-to-modified-documents-trectext-file> --embedding_model_file=<path-to-your-word-embbedings-model-file>--indri_path=<path-to-indri-directory>
---model=rank_models/model_bot --scripts_path=scripts/ --java_path=<path-to-your-java_path> --jar_path=scripts/RankLib.jar --home_path=~/
+--model=rank_models/model_lambdatamart --scripts_path=scripts/ --java_path=<path-to-your-java_path> --jar_path=scripts/RankLib.jar --home_path=~/
 --queries_text_file=data/working_comp_queries.txt
 --stopwords_file=data/stopwords_list --swig_path=<path-to-your-indri-jar-swig-directory>
